@@ -18,17 +18,42 @@
 /* ------------------------- Prototypes ----------------------------------- */
 int start1 (char *);
 
+static void clockHandler(int dev, void *args);
+static void diskHandler(int dev, void *args);
+static void terminalHandler(int dev, void *args);
+static void syscallHandler(int dec, void *args);
 
 /* -------------------------- Globals ------------------------------------- */
 
 int debugflag2 = 0;
 
-// the mail boxes 
+// the mail boxes
 mailbox MailBoxTable[MAXMBOX];
 
-// also need array of mail slots, array of function ptrs to system call 
+// also need array of mail slots, array of function ptrs to system call
 // handlers, ...
 
+
+
+/*Our functions*/
+
+static void clockHandler(int dev, void *args) {
+
+}
+
+static void diskHandler(int dev, void *args) {
+
+}
+
+static void terminalHandler(int dev, void *args) {
+
+}
+
+static void syscallHandler(int dev, void *args) {
+
+}
+
+/*Our functions*/
 
 
 
@@ -50,12 +75,38 @@ int start1(char *arg)
     if (DEBUG2 && debugflag2)
         USLOSS_Console("start1(): at beginning\n");
 
+    DisableInterrupts();
     // Initialize the mail box table, slots, & other data structures.
 
+    int i=0;
+    for (; i < MAXMBOX; i++){
+        MailBoxTable[i].mboxID = -1;
+        MailBoxTable[i].numSlots = -1;
+        MailBoxTable[i].numSlotsUsed = -1;
+        MailBoxTable[i].slotSize = -1;
+        MailBoxTable[i].headPtr = NULL;
+        MailBoxTable[i].endPtr = NULL;
+        MailBoxTable[i].blockStatus = 1;
+    }/*MailBoxTable*/
+    for (int i = 0; i < MAXSLOTS; i++) {
+        MailSlots[i].mboxID = -1;
+        MailSlots[i].status = -1;
+        MailSlots[i].nextSlot = NULL;
+        MailSlots[i].message[0] = '\0';
+        MailSlots[i].size = -1;
+    }/*Slots*/
+
+
     // Initialize USLOSS_IntVec and system call handlers,
+    USLOSS_IntVec[USLOSS_CLOCK_INT] = clockHandler;//There should be a new clockHandler
+    USLOSS_IntVec[USLOSS_DISK_INT] = diskHandler;
+    USLOSS_IntVec[USLOSS_TERM_INT] = terminalHandler;
+    USLOSS_IntVec[USLOSS_SYSCALL_INT] = syscallHandler;
+    // allocate mailboxes for interrupt handlers.  Etc...
 
-    // allocate mailboxes for interrupt handlers.  Etc... 
 
+    /*After initializes then enable interrupsts.*/
+    EnableInterrupts();
     // Create a process for start2, then block on a join until start2 quits
     if (DEBUG2 && debugflag2)
         USLOSS_Console("start1(): fork'ing start2 process\n");
@@ -71,12 +122,12 @@ int start1(char *arg)
 
 /* ------------------------------------------------------------------------
    Name - MboxCreate
-   Purpose - gets a free mailbox from the table of mailboxes and initializes it 
+   Purpose - gets a free mailbox from the table of mailboxes and initializes it
    Parameters - maximum number of slots in the mailbox and the max size of a msg
                 sent to the mailbox.
    Returns - -1 to indicate that no mailbox was created, or a value >= 0 as the
              mailbox id.
-   Side Effects - initializes one element of the mail box array. 
+   Side Effects - initializes one element of the mail box array.
    ----------------------------------------------------------------------- */
 int MboxCreate(int slots, int slot_size)
 {
