@@ -111,3 +111,16 @@ int MboxReceive(int mbox_id, void *msg_ptr, int msg_size)
 {
     return 0;
 } /* MboxReceive */
+
+
+/* ------------------------------------------------------------------------
+   Name - check_io
+   Purpose - I don't know
+   Parameters - none that I know of
+   Returns - duck if I know 
+   Side Effects - none.
+   ----------------------------------------------------------------------- */
+void check_io()
+{
+    
+}
