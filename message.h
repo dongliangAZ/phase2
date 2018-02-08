@@ -7,18 +7,18 @@ typedef struct mailbox   mailbox;
 typedef struct mboxProc *mboxProcPtr;
 
 struct mailbox {
-    int             mboxID;
+    int             ID;
     int             numSlots;
     int             numSlotsUsed;
     int             slotSize;
     slotPtr         head;
-    slotPtr         end;
+    //slotPtr         end;
     int             status;
 
 };
 
 struct mailSlot {
-    int         mboxID;
+    int         ID;
     int         status;
     slotPtr     next;
     char        message[MAX_MESSAGE];

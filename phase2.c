@@ -76,7 +76,7 @@ void isKernal(){
     if ((USLOSS_PSR_CURRENT_MODE & USLOSS_PsrGet()) == 0) {
 		USLOSS_Console("Error:Not in the kernel mode.");
 		USLOSS_Halt(1);
-	} 
+	}
 }
 
 /* ------------------------------------------------------------------------
@@ -113,6 +113,73 @@ void EnableInterrupts() {
 	}      //in the kernel mode
 }
 
+
+/* ------------------------------------------------------------------------
+   Name - Initialize
+   Purpose - Initializes data structures and used in the function start1
+   Parameters - nothing
+   Returns - void
+   Side Effects - Initialize data structures.
+   ----------------------------------------------------------------------- */
+void Initialize(){
+	int i;
+	for (i = 0; i < MAXMBOX; i++){
+		  MailBoxTable[i].status = 20;
+			MailBoxTable[i].ID =-1; //20 unused
+			MailBoxTable[i].numSlots = -1;
+			MailBoxTable[i].numSlotsUsed = -1;
+			MailBoxTable[i].slotSize = -1;
+			MailBoxTable[i].head = NULL;
+			//MailBoxTable[i].end = NULL;
+	}/*MailBoxTable*/
+	for (i = 0; i < MAXSLOTS; i++) {
+			MailSlots[i].next = NULL;
+			MailSlots[i].status = -1;
+			MailSlots[i].ID = -1;
+			MailSlots[i].message[0] = '\0';
+			MailSlots[i].current_size = -1;
+	}/*Slots*/
+
+}
+
+
+/* ------------------------------------------------------------------------
+   Name - errorCases_Send
+   Purpose - To do the error check for Mess_send
+   Parameters - int mbox_id, void *msg_ptr, int msg_size
+   Returns - An integer bool to tell if there is an error.
+   Side Effects - none.
+   ----------------------------------------------------------------------- */
+int errorCases_Send(int mbox_id, void *msg_ptr, int msg_size, mailbox *box){
+/*
+		-3: process has been zap’d or the mailbox released while the process was
+        blocked on the mailbox.
+    -1: illegal values given as arguments.
+~phase2.v1.0
+--
+*/
+
+		if (msg_size > MAX_MESSAGE||msg_size > box->slotSize||box->ID ==-1){
+				EnableInterrupts();
+				return -1;
+		}
+
+		else if(box->numSlots==0){
+
+				if(isZapped()||box->status ==20){
+			  		EnableInterrupts();
+			  		return -3;
+				}else{
+						return 0;
+				}
+		}
+
+		else{
+			return 1;
+		}
+
+}
+
 /* --------------------------Our-Functions-End----------------------------------- */
 
 /* -------------------------- Functions ----------------------------------- */
@@ -135,25 +202,7 @@ int start1(char *arg)
 
     DisableInterrupts();
     // Initialize the mail box table, slots, & other data structures.
-
-    int i;
-    for (i = 0; i < MAXMBOX; i++){
-        MailBoxTable[i].mboxID = -1; //20 unused
-        MailBoxTable[i].numSlots = -1;
-        MailBoxTable[i].numSlotsUsed = -1;
-        MailBoxTable[i].slotSize = -1;
-        MailBoxTable[i].head = NULL;
-        MailBoxTable[i].end = NULL;
-        MailBoxTable[i].status = 20;
-    }/*MailBoxTable*/
-    for (i = 0; i < MAXSLOTS; i++) {
-        MailSlots[i].mboxID = -1;
-        MailSlots[i].status = -1;
-        MailSlots[i].next = NULL;
-        MailSlots[i].message[0] = '\0';
-        MailSlots[i].current_size = -1;
-    }/*Slots*/
-
+		Initialize();
 
     // Initialize USLOSS_IntVec and system call handlers,
     USLOSS_IntVec[USLOSS_CLOCK_INT] = clockHandler;//There should be a new clockHandler
@@ -161,7 +210,7 @@ int start1(char *arg)
     USLOSS_IntVec[USLOSS_TERM_INT] = terminalHandler;
     USLOSS_IntVec[USLOSS_SYSCALL_INT] = syscallHandler;
     // allocate mailboxes for interrupt handlers.  Etc...
-    
+
 
     /*After initializes then enable interrupsts.*/
     EnableInterrupts();
@@ -200,14 +249,14 @@ int MboxCreate(int slots, int slot_size)
            MailBoxTable[mailbox_id].status = 21;
            MailBoxTable[mailbox_id].numSlots = slots;
            MailBoxTable[mailbox_id].slotSize = slot_size;
+					 MailBoxTable[mailbox_id].head=NULL;
            DisableInterrupts();
            return mailbox_id;
         }
-       
+
     }
     return -1;
 } /* MboxCreate */
-
 
 /* ------------------------------------------------------------------------
    Name - MboxSend
@@ -223,17 +272,25 @@ int MboxSend(int mbox_id, void *msg_ptr, int msg_size)
     DisableInterrupts();
     //check errors office hours
     mailbox *box = &(MailBoxTable[mbox_id]);
+
+		/*check for error cases*/
+    int err=errorCases_Send(mbox_id, msg_ptr,msg_size,box);//
+		if(err<=0)
+			return err;
+
+		/*
     if(box->numSlotsUsed > msg_size){
         //office hours
         //block in if
         //add to waitlist
     } else {
         if(box->head==NULL){
-            memcpy(box->message, msg_ptr, msg_size);
+            //memcpy(box->message, msg_ptr, msg_size);
         } else {
-            memcpy(box->message, box->head->message, msg_size);//office hours
+            //memcpy(box->message, box->head->message, msg_size);//office hours
         }
     }
+		*/
     EnableInterrupts();
     return 0;
 } /* MboxSend */
@@ -258,10 +315,10 @@ int MboxReceive(int mbox_id, void *msg_ptr, int msg_size)
    Name - check_io
    Purpose - I don't know
    Parameters - none that I know of
-   Returns - duck if I know 
+   Returns - duck if I know
    Side Effects - none.
    ----------------------------------------------------------------------- */
 void check_io()
 {
-    
+
 }
