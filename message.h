@@ -2,18 +2,27 @@
 #define DEBUG2 1
 
 typedef struct mailSlot *slotPtr;
+typedef struct mailSlot mailSlot;//office hours
 typedef struct mailbox   mailbox;
 typedef struct mboxProc *mboxProcPtr;
 
 struct mailbox {
-    int       mboxID;
-    // other items as needed...
+    int             mboxID;
+    int             numSlots;
+    int             numSlotsUsed;
+    int             slotSize;
+    slotPtr         head;
+    slotPtr         end;
+    int             status;
+
 };
 
 struct mailSlot {
-    int       mboxID;
-    int       status;
-    // other items as needed...
+    int         mboxID;
+    int         status;
+    slotPtr     next;
+    char        message[MAX_MESSAGE];
+    int         current_size;
 };
 
 struct psrBits {

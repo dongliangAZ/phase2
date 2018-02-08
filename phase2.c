@@ -29,13 +29,17 @@ int debugflag2 = 0;
 
 // the mail boxes
 mailbox MailBoxTable[MAXMBOX];
+mailSlot MailSlots[MAXSLOTS];
 
 // also need array of mail slots, array of function ptrs to system call
 // handlers, ...
 
 
 
-/*Our functions*/
+
+
+/* --------------------------Our-Functions ----------------------------------- */
+
 
 static void clockHandler(int dev, void *args) {
 
@@ -53,9 +57,55 @@ static void syscallHandler(int dev, void *args) {
 
 }
 
-/*Our functions*/
+/* ------------------------------------------------------------------------
+ Name - currentMode
+ Purpose - returns which mode you are in.
+ Parameters -
+ Returns - 1 is kernal, 0 is user, and -1 is error
+ Side Effects -
+ ----------------------------------------------------------------------- */
 
+int currentMode() {
+	union psrValues psr;
+	psr.integerPart = USLOSS_PsrGet();
+	return psr.bits.curMode;
+}
 
+/* ------------------------------------------------------------------------
+ Name - DisableInterrupts
+ Purpose - To disable interrups
+ Parameters -none
+ Returns -  void
+ Side Effects - No side effect.
+ ----------------------------------------------------------------------- */
+void DisableInterrupts() {
+	if ((USLOSS_PSR_CURRENT_MODE & USLOSS_PsrGet()) == 0) {
+		USLOSS_Console("Error:Not in the kernel mode.");
+		USLOSS_Halt(1);
+	}      //if it is not in the kernel mode
+	else {
+		 int disable = USLOSS_PsrSet( USLOSS_PsrGet() & ~USLOSS_PSR_CURRENT_INT );
+	}      //in the kernel mode
+}
+
+/* ------------------------------------------------------------------------
+ Name - EnableInterrupts
+ Purpose - To enable interrupts
+ Parameters -none
+ Returns -  void
+ Side Effects - No side effect.
+ ----------------------------------------------------------------------- */
+void EnableInterrupts() {
+	if ((USLOSS_PSR_CURRENT_MODE & USLOSS_PsrGet()) == 0) {
+		USLOSS_Console("Error:Not in the kernel mode.");
+		USLOSS_Halt(1);
+	}      //if it is not in the kernel mode
+	else {
+		int enable = USLOSS_PsrSet( USLOSS_PsrGet() | USLOSS_PSR_CURRENT_INT);
+	}      //in the kernel mode
+}
+
+/* --------------------------Our-Functions-End----------------------------------- */
 
 /* -------------------------- Functions ----------------------------------- */
 
@@ -78,22 +128,22 @@ int start1(char *arg)
     DisableInterrupts();
     // Initialize the mail box table, slots, & other data structures.
 
-    int i=0;
-    for (; i < MAXMBOX; i++){
-        MailBoxTable[i].mboxID = -1;
+    int i;
+    for (i = 0; i < MAXMBOX; i++){
+        MailBoxTable[i].mboxID = -1; //20 unused
         MailBoxTable[i].numSlots = -1;
         MailBoxTable[i].numSlotsUsed = -1;
         MailBoxTable[i].slotSize = -1;
-        MailBoxTable[i].headPtr = NULL;
-        MailBoxTable[i].endPtr = NULL;
-        MailBoxTable[i].blockStatus = 1;
+        MailBoxTable[i].head = NULL;
+        MailBoxTable[i].end = NULL;
+        MailBoxTable[i].status = 20;
     }/*MailBoxTable*/
-    for (int i = 0; i < MAXSLOTS; i++) {
+    for (i = 0; i < MAXSLOTS; i++) {
         MailSlots[i].mboxID = -1;
         MailSlots[i].status = -1;
-        MailSlots[i].nextSlot = NULL;
+        MailSlots[i].next = NULL;
         MailSlots[i].message[0] = '\0';
-        MailSlots[i].size = -1;
+        MailSlots[i].current_size = -1;
     }/*Slots*/
 
 
@@ -103,7 +153,7 @@ int start1(char *arg)
     USLOSS_IntVec[USLOSS_TERM_INT] = terminalHandler;
     USLOSS_IntVec[USLOSS_SYSCALL_INT] = syscallHandler;
     // allocate mailboxes for interrupt handlers.  Etc...
-
+    
 
     /*After initializes then enable interrupsts.*/
     EnableInterrupts();
@@ -131,7 +181,24 @@ int start1(char *arg)
    ----------------------------------------------------------------------- */
 int MboxCreate(int slots, int slot_size)
 {
-    return 0;
+    if ((USLOSS_PSR_CURRENT_MODE & USLOSS_PsrGet()) == 0) {
+		USLOSS_Console("Error:Not in the kernel mode.");
+		USLOSS_Halt(1);
+	}      //if it is not in the kernel mode
+	EnableInterrupts();
+    if(slot_size<=0 || slots > MAXSLOTS || slots<=0){//office hours
+        return -1;
+    }
+    int mailbox_id;
+    for(mailbox_id = 7; mailbox_id < MAXMBOX; mailbox_id++){
+        if(MailBoxTable[mailbox_id].status == 20){
+           MailBoxTable[mailbox_id].status = 21;
+           DisableInterrupts();
+           return mailbox_id;
+        }
+       
+    }
+    return -1;
 } /* MboxCreate */
 
 
