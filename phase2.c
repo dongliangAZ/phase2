@@ -18,6 +18,7 @@
 
 /* ------------------------- Prototypes ----------------------------------- */
 int start1 (char *);
+int check_io();
 
 static void clockHandler(int dev, void *args);
 static void diskHandler(int dev, void *args);
