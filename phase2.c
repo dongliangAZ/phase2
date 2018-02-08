@@ -12,6 +12,7 @@
 #include <phase2.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <message.h>
 
@@ -69,6 +70,13 @@ int currentMode() {
 	union psrValues psr;
 	psr.integerPart = USLOSS_PsrGet();
 	return psr.bits.curMode;
+}
+
+void isKernal(){
+    if ((USLOSS_PSR_CURRENT_MODE & USLOSS_PsrGet()) == 0) {
+		USLOSS_Console("Error:Not in the kernel mode.");
+		USLOSS_Halt(1);
+	} 
 }
 
 /* ------------------------------------------------------------------------
@@ -181,10 +189,7 @@ int start1(char *arg)
    ----------------------------------------------------------------------- */
 int MboxCreate(int slots, int slot_size)
 {
-    if ((USLOSS_PSR_CURRENT_MODE & USLOSS_PsrGet()) == 0) {
-		USLOSS_Console("Error:Not in the kernel mode.");
-		USLOSS_Halt(1);
-	}      //if it is not in the kernel mode
+    isKernal();
 	EnableInterrupts();
     if(slot_size<=0 || slots > MAXSLOTS || slots<=0){//office hours
         return -1;
@@ -193,6 +198,8 @@ int MboxCreate(int slots, int slot_size)
     for(mailbox_id = 7; mailbox_id < MAXMBOX; mailbox_id++){
         if(MailBoxTable[mailbox_id].status == 20){
            MailBoxTable[mailbox_id].status = 21;
+           MailBoxTable[mailbox_id].numSlots = slots;
+           MailBoxTable[mailbox_id].slotSize = slot_size;
            DisableInterrupts();
            return mailbox_id;
         }
@@ -212,6 +219,22 @@ int MboxCreate(int slots, int slot_size)
    ----------------------------------------------------------------------- */
 int MboxSend(int mbox_id, void *msg_ptr, int msg_size)
 {
+    isKernal();
+    DisableInterrupts();
+    //check errors office hours
+    mailbox *box = &(MailBoxTable[mbox_id]);
+    if(box->numSlotsUsed > msg_size){
+        //office hours
+        //block in if
+        //add to waitlist
+    } else {
+        if(box->head==NULL){
+            memcpy(box->message, msg_ptr, msg_size);
+        } else {
+            memcpy(box->message, box->head->message, msg_size);//office hours
+        }
+    }
+    EnableInterrupts();
     return 0;
 } /* MboxSend */
 
